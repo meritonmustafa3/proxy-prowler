@@ -54,10 +54,9 @@ app.post("/", async (req, res) => {
 
     const text = await prowlerRes.text();
     res.status(prowlerRes.status).set("Content-Type", "application/json");
-    const sessionId = prowlerRes.headers.get("mcp-session-id");
-    if (sessionId) res.set("MCP-Session-Id", sessionId);
-    const protocolVersion = prowlerRes.headers.get("mcp-protocol-version");
-    if (protocolVersion) res.set("MCP-Protocol-Version", protocolVersion);
+    prowlerRes.headers.forEach((value, key) => {
+      if (key.toLowerCase().startsWith("mcp")) res.set(key, value);
+    });
     res.send(text);
   } catch (err) {
     console.error("[Prowler proxy error]", err);
@@ -71,6 +70,37 @@ app.post("/", async (req, res) => {
 
 app.get("/health", (req, res) => {
   res.json({ ok: true, service: "prowler-proxy" });
+});
+
+app.get("/debug-init", async (req, res) => {
+  try {
+    const prowlerRes = await fetch(PROWLER_MCP_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
+        "User-Agent": "prowler-proxy/1.0 (MCP-Client)",
+        Authorization: `Bearer ${PROWLER_API_KEY}`,
+        "MCP-Protocol-Version": "2025-11-25",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "initialize",
+        params: {
+          protocolVersion: "2025-11-25",
+          capabilities: {},
+          clientInfo: { name: "debug", version: "1.0" },
+        },
+      }),
+    });
+    const text = await prowlerRes.text();
+    const headers = {};
+    prowlerRes.headers.forEach((v, k) => { headers[k] = v; });
+    res.json({ status: prowlerRes.status, headers, body: text.slice(0, 500) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.listen(PORT, () => {
