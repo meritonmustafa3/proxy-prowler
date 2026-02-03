@@ -37,19 +37,28 @@ app.post("/", async (req, res) => {
   }
 
   try {
+    const headers = {
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+      "User-Agent": "prowler-proxy/1.0 (MCP-Client)",
+      Authorization: `Bearer ${PROWLER_API_KEY}`,
+    };
+    if (req.headers["mcp-session-id"]) headers["MCP-Session-Id"] = req.headers["mcp-session-id"];
+    if (req.headers["mcp-protocol-version"]) headers["MCP-Protocol-Version"] = req.headers["mcp-protocol-version"];
+
     const prowlerRes = await fetch(PROWLER_MCP_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json, text/event-stream",
-        "User-Agent": "prowler-proxy/1.0 (MCP-Client)",
-        Authorization: `Bearer ${PROWLER_API_KEY}`,
-      },
+      headers,
       body: JSON.stringify(req.body),
     });
 
     const text = await prowlerRes.text();
-    res.status(prowlerRes.status).set("Content-Type", "application/json").send(text);
+    res.status(prowlerRes.status).set("Content-Type", "application/json");
+    const sessionId = prowlerRes.headers.get("mcp-session-id");
+    if (sessionId) res.set("MCP-Session-Id", sessionId);
+    const protocolVersion = prowlerRes.headers.get("mcp-protocol-version");
+    if (protocolVersion) res.set("MCP-Protocol-Version", protocolVersion);
+    res.send(text);
   } catch (err) {
     console.error("[Prowler proxy error]", err);
     res.status(502).json({
