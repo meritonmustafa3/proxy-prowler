@@ -1,0 +1,16 @@
+{
+  "name": "prowler-proxy",
+  "version": "1.0.0",
+  "description": "Proxy for Cloudflare Worker to reach Prowler MCP (avoids 403 from Prowler)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.0"
+  }
+}
